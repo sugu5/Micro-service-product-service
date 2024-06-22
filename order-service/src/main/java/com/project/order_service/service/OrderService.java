@@ -1,5 +1,6 @@
 package com.project.order_service.service;
 
+import com.project.order_service.dto.InventoryResponse;
 import com.project.order_service.dto.OrderLinesItemsDto;
 import com.project.order_service.dto.OrderRequest;
 import com.project.order_service.model.Order;
@@ -8,8 +9,10 @@ import com.project.order_service.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +22,7 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final WebClient.Builder webClient;
     public void placeOrder(OrderRequest orderRequest)
     {
         Order order = new Order();
@@ -27,7 +31,25 @@ public class OrderService {
         List<OrderLinesItemsDto> orderLinesItemsList = orderRequest.getOrderLinesItemsDtoList();
         List<OrderLinesItems> requiredOrderItemsList = createOrderList(orderLinesItemsList);
         order.setOrderLinesItemsList(requiredOrderItemsList);
-        orderRepository.save(order);
+
+        List<String>skuCodeList = order.getOrderLinesItemsList().stream()
+                .map(OrderLinesItems::getSkuCode)
+                .toList();
+
+        InventoryResponse [] inventoryResponsesArray = webClient.build().get()
+                .uri("http://inventory-service/api/inventory",
+                        uriBuilder -> uriBuilder.queryParam("skuCodes",skuCodeList).build())
+                .retrieve().bodyToMono(InventoryResponse[].class)
+                .block();
+
+        boolean allProductInStock = Arrays.stream(inventoryResponsesArray).allMatch(InventoryResponse::isInStock);
+        if(allProductInStock)
+        {
+            orderRepository.save(order);
+        }
+        else {
+            throw new IllegalArgumentException("Product is not in stock, please try again after some time");
+        }
     }
 
     private List<OrderLinesItems> createOrderList(List<OrderLinesItemsDto> orderLinesItemsList) {
