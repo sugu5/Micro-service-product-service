@@ -12,9 +12,11 @@
         <module name="inventory" />
         <module name="Gateway" />
         <module name="discovery" />
+        <module name="notification-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="kafka" target="17" />
       <module name="Micro-service-product-service" target="19" />
     </bytecodeTargetLevel>
   </component>
@@ -23,6 +25,8 @@
       <module name="Gateway" options="-parameters" />
       <module name="discovery" options="-parameters" />
       <module name="inventory" options="-parameters" />
+      <module name="kafka" options="-parameters" />
+      <module name="notification-service" options="-parameters" />
       <module name="order-service" options="-parameters" />
       <module name="product-service" options="-parameters" />
     </option>
